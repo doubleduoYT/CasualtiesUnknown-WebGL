@@ -1,0 +1,36 @@
+name: Deploy WebGL
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - name: Download verified build
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          curl --fail --location --retry 3 "https://github.com/$REPO/releases/download/v12.4.2-webgl/CasualtiesUnknown-WebGL-release.zip" --output build.zip
+          echo "1ef0271e7f6aba39c7d72536f47de8b7e1d97c34e8b16315b4732d520fd6abbb  build.zip" | sha256sum --check
+          mkdir _site
+          unzip -q build.zip -d _site
+          test -f _site/index.html
+          test -f _site/Build/HTML5-Verified.wasm
+          touch _site/.nojekyll
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - uses: actions/deploy-pages@v4
+        id: deployment
